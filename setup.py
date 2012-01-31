@@ -10,7 +10,7 @@ setup(
     author = __author__,
     author_email = __email__,
     py_modules = ['plugin_framework'],
-    url = 'https://github.com/stebalien/python-plugin_framework',
+    url = 'https://github.com/Stebalien/python-plugin_framework',
 )
 
 
