@@ -80,14 +80,14 @@ class PluginManager(dict):
         pass
 
 class Plugin(object):
+
     def __init__(self):
-        self._enabled = False
         self.on_prepare()
 
     @property
     def enabled(self):
         """True if the plugin is enabled."""
-        return self._enabled
+        return getattr(self, "_enabled", False)
     @enabled.setter
     def enabled(self, value):
         if value != self._enabled:
