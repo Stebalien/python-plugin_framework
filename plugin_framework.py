@@ -7,7 +7,9 @@ The PluginManager will load all plugins of a given type in a given package and
 provides methods for manageing them.
 
 Plugins are responsible for determining weather or not they are enabled on
-prepare and setting enabled appropriatly.
+load and setting enabled appropriatly.
+
+Plugins should NOT enable themselves in __init__. 
 
 """
 
@@ -15,6 +17,15 @@ __version__ = "0.1"
 __author__ = "Steven Allen"
 __email__ = "steven@stebalien.com"
 
+class PluginDependencyError(Exception):
+    def __init__(self, message="", depends=None):
+        super(PluginDependencyError, self).__init__(message)
+        self.depends = depends
+
+class PluginError(Exception):
+    def __init__(self, message="", plugin=None):
+        super(PluginError, self).__init__(message)
+        self.plugin = plugin
 
 class PluginManager(dict):
 
@@ -29,12 +40,21 @@ class PluginManager(dict):
         import pkgutil
         from inspect import isclass
         self.clear()
+
+        # Instantiate
         for loader, module_name, is_pkg in pkgutil.iter_modules(self.plugin_package.__path__):
-            for name, plugin in loader.find_module(module_name).load_module(module_name).__dict__.iteritems():
-                if isclass(plugin) and issubclass(plugin, self.base_class) and plugin is not self.base_class and name not in self:
-                    instance =  plugin(**self.instance_arguments)
-                    self[name] = instance
-                    self.on_load_plugin(instance)
+            for name, plugin_class in loader.find_module(module_name).load_module(module_name).__dict__.iteritems():
+                if isclass(plugin_class) and issubclass(plugin_class, self.base_class) and plugin_class is not self.base_class and name not in self:
+                    self[name] = plugin_class(**self.instance_arguments)
+
+        # Load
+        for plugin in self.itervalues():
+            self.on_load_plugin(plugin)
+            plugin.on_load()
+
+        # Enable
+        for plugin in self.enabled_plugins.itervalues():
+            plugin.on_enable()
     
     @property
     def enabled_plugins(self):
@@ -46,23 +66,83 @@ class PluginManager(dict):
         """A dictionary of disabled plugins."""
         return {k:v for k,v in self.iteritems() if v.disabled}
 
-    def enable_plugin(self, plugin):
+    def check_deps(self, plugin):
+        """Check a plugins dependencies.
+
+        Returns: a set of met and unmet dependencies.
+        """
+        plugin = self[plugin] if type(plugin) is str else plugin
+
+        unmet = set()
+        met   = set()
+
+        for p in plugin.depends:
+            if not p in met:
+                new_met, new_unmet = self.check_deps(self, p)
+                unmet.union(new_unmet)
+                met.union(new_met)
+
+        return met, unmet
+
+    def enable_plugin(self, plugin, auto_deps=True, check_deps=True):
         """ Enable a plugin
 
         Arguments:
-            plugin - the plugin to enable
+            plugin - the plugin to enable (name or instance)
+            auto_deps   - automatically enable dependencies.
+            check_deps  - check for dependency existance before doing anything.
+
+        Returns: True if a plugin was enabled
+
+        Raises:
+            PluginDependencyError - if a plugin has unmet dependencies
+            PluginError - if the requested plugin does not exist
+
         """
-        if self.plugins[plugin].enable():
+        try:
+            plugin = self[plugin] if type(plugin) is str else plugin
+        except KeyError:
+            raise PluginError("Plugin '%s' does not exist." % plugin, plugin)
+
+        if plugin.enabled:
+            return False
+
+        if auto_deps:
+            if check_deps:
+                _, unmet = self.check_deps(plugin)
+                if unmet:
+                    raise PluginDependencyError("Required plugins not found: %s" % ", ".join(unmet), unmet)
+            for p in plugin.depends:
+                self.enable_plugin(p, auto_deps)
+        else:
+            unmet = set(self.disabled_plugins).intersect(set(plugin.depends))
+            if unmet:
+                raise PluginDependencyError("Unmet Dependencies: %s" % ", ".join(unmet), unmet)
+
+        if plugin.enable():
             self.on_enable(plugin)
+            return True
+        return False
 
     def disable_plugin(self, plugin):
         """ Disable a plugin
         
         Arguments:
-            plugin - the plugin to disable
+            plugin - the plugin to disable (name or instance)
+
+        Returns: True if a plugin was disabled
+
+        Raises:
+            PluginError - if the requested plugin does not exist
         """
-        if self.plugins[plugin].disable():
+        try:
+            plugin = self[plugin] if type(plugin) is str else plugin
+        except KeyError:
+            raise PluginError("Plugin '%s' does not exist." % plugin)
+        if plugin.disable():
             self.on_disable(plugin)
+            return True
+        return False
 
     def on_enable_plugin(self, plugin):
         """Called when a plugin is enabled.
@@ -80,27 +160,14 @@ class PluginManager(dict):
         pass
 
 class Plugin(object):
-
-    def __init__(self):
-        self.on_prepare()
-
-    @property
-    def enabled(self):
-        """True if the plugin is enabled."""
-        return getattr(self, "_enabled", False)
-    @enabled.setter
-    def enabled(self, value):
-        if value != self.enabled:
-            self._enabled = value
-            if value:
-                self.on_enable()
-            else:
-                self.on_disable()
+    depends = ()
+    enabled = False
 
     def enable(self):
         """Enable the plugin."""
         if not self.enabled:
             self.enabled = True
+            self.on_enable()
             return True
         return False
 
@@ -108,10 +175,11 @@ class Plugin(object):
         """Disable the plugin."""
         if self.enabled:
             self.enabled = False
+            self.on_disable()
             return True
         return False
 
-    def on_prepare(self):
+    def on_load(self):
         """Called when the plugin is loaded."""
         pass
 
