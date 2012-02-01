@@ -90,7 +90,8 @@ class Plugin(object):
         return getattr(self, "_enabled", False)
     @enabled.setter
     def enabled(self, value):
-        if value != self._enabled:
+        if value != self.enabled:
+            self._enabled = value
             if value:
                 self.on_enable()
             else:
