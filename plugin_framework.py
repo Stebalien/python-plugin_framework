@@ -54,6 +54,7 @@ class PluginManager(dict):
 
         # Enable
         for plugin in self.enabled_plugins.itervalues():
+            plugin.on_enable_plugin(plugin)
             plugin.on_enable()
     
     @property
@@ -64,7 +65,7 @@ class PluginManager(dict):
     @property
     def disabled_plugins(self):
         """A dictionary of disabled plugins."""
-        return {k:v for k,v in self.iteritems() if v.disabled}
+        return {k:v for k,v in self.iteritems() if not v.enabled}
 
     def check_deps(self, plugin):
         """Check a plugins dependencies.
@@ -145,10 +146,7 @@ class PluginManager(dict):
         return False
 
     def on_enable_plugin(self, plugin):
-        """Called when a plugin is enabled.
-
-        Not called when a plugin is initially loaded.
-        """
+        """Called when a plugin is enabled."""
         pass
 
     def on_disable_plugin(self, plugin):
