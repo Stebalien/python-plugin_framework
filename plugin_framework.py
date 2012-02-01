@@ -5,6 +5,10 @@ A simple plugin framework.
 
 The PluginManager will load all plugins of a given type in a given package and
 provides methods for manageing them.
+
+Plugins are responsible for determining weather or not they are enabled on
+prepare and setting enabled appropriatly.
+
 """
 
 __version__ = "0.1"
@@ -77,19 +81,16 @@ class PluginManager(dict):
 
 class Plugin(object):
     def __init__(self):
+        self._enabled = False
         self.on_prepare()
-        if self.enabled:
-            self.on_enable()
 
     @property
     def enabled(self):
         """True if the plugin is enabled."""
-        return self.preferences.getboolean("enabled")
+        return self._enabled
     @enabled.setter
     def enabled(self, value):
-        if value != self.preferences.getboolean("enabled"):
-            self.preferences.set("enabled", value)
-            self.preferences.save()
+        if value != self._enabled:
             if value:
                 self.on_enable()
             else:
