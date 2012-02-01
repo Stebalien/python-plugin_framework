@@ -34,7 +34,7 @@ class PluginManager(dict):
                 if isclass(plugin) and issubclass(plugin, self.base_class) and plugin is not self.base_class and name not in self:
                     instance =  plugin(**self.instance_arguments)
                     self[name] = instance
-                    self.on_load(instance)
+                    self.on_load_plugin(instance)
     
     @property
     def enabled_plugins(self):
