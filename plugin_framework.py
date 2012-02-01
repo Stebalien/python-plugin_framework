@@ -54,7 +54,7 @@ class PluginManager(dict):
 
         # Enable
         for plugin in self.enabled_plugins.itervalues():
-            plugin.on_enable_plugin(plugin)
+            self.on_enable_plugin(plugin)
             plugin.on_enable()
     
     @property
