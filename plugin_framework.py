@@ -7,7 +7,7 @@ The PluginManager will load all plugins of a given type in a given package and
 provides methods for manageing them.
 """
 
-__version__ = 0.1
+__version__ = "0.1"
 __author__ = "Steven Allen"
 __email__ = "steven@stebalien.com"
 
