@@ -38,13 +38,13 @@ class PluginManager(dict):
     
     @property
     def enabled_plugins(self):
-        """A list of the names of enabled plugins."""
-        return [ p for p in self if p.enabled ]
+        """A dictionary of enabled plugins."""
+        return {k:v for k,v in self.iteritems() if v.enabled}
 
     @property
     def disabled_plugins(self):
-        """A list of the names of disabled plugins."""
-        return [ p for p in self if p.disabled ]
+        """A dictionary of disabled plugins."""
+        return {k:v for k,v in self.iteritems() if v.disabled}
 
     def enable_plugin(self, plugin):
         """ Enable a plugin
