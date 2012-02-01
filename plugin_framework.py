@@ -60,18 +60,18 @@ class PluginManager(dict):
         if self.plugins[plugin].disable():
             self.on_disable(plugin)
 
-    def on_enable(self, plugin):
+    def on_enable_plugin(self, plugin):
         """Called when a plugin is enabled.
 
         Not called when a plugin is initially loaded.
         """
         pass
 
-    def on_disable(self, plugin):
+    def on_disable_plugin(self, plugin):
         """Called when a plugin is disabled."""
         pass
 
-    def on_load(self, plugin):
+    def on_load_plugin(self, plugin):
         """Called when a plugin is loaded."""
         pass
 
