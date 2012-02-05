@@ -1,15 +1,34 @@
 #!/usr/bin/env python2
 # encoding: utf-8
 """
-A simple plugin framework.
+Plugin Framework
+================
+A simple plugin framework for python.
 
-The PluginManager will load all plugins of a given type in a given package and
-provides methods for manageing them.
+PluginManager
+-------------
+The PluginManager class loads all plugins of a given type in a given package and
+provides methods for managing them.
 
-Plugins are responsible for determining weather or not they are enabled on
-load and setting enabled appropriatly.
+Plugin
+------
+The base plugin for the program should subclass the Plugin class. This base
+plugin class should be given to the PluginManager when it is initialized (as
+base_class).
 
-Plugins should NOT enable themselves in __init__. 
+Enabling/Disabling Plugins
+--------------------------
+``enabled`` should be set either by the PluginManager in ``on_load_plugin`` or by
+``on_load`` in the Plugin itself. If a plugin is to be enabled or disabled after
+loading, call enable() or disable(). Do not call enable/disable on load.
+
+Dependencies
+------------
+Dependencies are static and can be set in a Plugin's depends list. They will be
+resolved on-enable (if enabled through ``PluginManager.enable_plugin``) and will
+be automatically enabled if ``enable_plugin`` is called with auto_deps=True.
+
+PluginDependencyError will be raised if a dependency cannot be resolved.
 
 """
 
@@ -18,25 +37,54 @@ __author__ = "Steven Allen"
 __email__ = "steven@stebalien.com"
 
 class PluginDependencyError(Exception):
+    """Raised on a dependency error
+
+    If missing dependencies are specified, they will be stored in the depends
+    attribute.
+    """
     def __init__(self, message="", depends=None):
+        """
+        Arguments:
+            message - an optional error message.
+            depends - an optional list of missing dependencies.
+        """
+
         super(PluginDependencyError, self).__init__(message)
         self.depends = depends
 
 class PluginError(Exception):
+    """Raised if there is a problem either finding or loading a plugin."""
     def __init__(self, message="", plugin=None):
+        """
+        Arguments:
+            message - an optional error message.
+            depends - the name of the missing plugin (optional).
+        """
         super(PluginError, self).__init__(message)
         self.plugin = plugin
 
 class PluginManager(dict):
+    """Manages the plugins."""
 
     def __init__(self, base_class, plugin_package, instance_arguments = {}):
+        """
+        Arguments:
+            base_class - the plugin base class (should be a subclass of Plugin)
+            plugin_package - the package containing all of the plugins
+            instance_arguments - a dictionary of instance arguments to be
+                passed to plugins on instantiation.
+        """
+
         self.plugin_package = plugin_package
         self.base_class = base_class
         self.instance_arguments = instance_arguments
         self.reload_plugins()
 
     def reload_plugins(self):
-        """ Reload all plugins. """
+        """Reload all plugins.
+
+        This method is automatically called on init.
+        """
         import pkgutil
         from inspect import isclass
         self.clear()
@@ -68,7 +116,7 @@ class PluginManager(dict):
         return {k:v for k,v in self.iteritems() if not v.enabled}
 
     def check_deps(self, plugin):
-        """Check a plugins dependencies.
+        """Check a plugin's dependencies.
 
         Returns: a set of met and unmet dependencies.
         """
@@ -89,7 +137,7 @@ class PluginManager(dict):
         """ Enable a plugin
 
         Arguments:
-            plugin - the plugin to enable (name or instance)
+            plugin      - the plugin to enable (name or instance)
             auto_deps   - automatically enable dependencies.
             check_deps  - check for dependency existance before doing anything.
 
@@ -158,6 +206,12 @@ class PluginManager(dict):
         pass
 
 class Plugin(object):
+    """The abstract Plugin class.
+
+    Put the names of required plugins in depends.
+    Plugin loading/enabling order is not specified.
+    """
+    
     depends = ()
     enabled = False
 
