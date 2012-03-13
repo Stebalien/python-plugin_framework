@@ -169,7 +169,7 @@ class PluginManager(dict):
                 raise PluginDependencyError("Unmet Dependencies: %s" % ", ".join(unmet), unmet)
 
         if plugin.enable():
-            self.on_enable(plugin)
+            self.on_enable_plugin(plugin)
             return True
         return False
 
@@ -189,7 +189,7 @@ class PluginManager(dict):
         except KeyError:
             raise PluginError("Plugin '%s' does not exist." % plugin)
         if plugin.disable():
-            self.on_disable(plugin)
+            self.on_disable_plugin(plugin)
             return True
         return False
 
