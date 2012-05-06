@@ -66,7 +66,7 @@ class PluginError(Exception):
 class PluginManager(dict):
     """Manages the plugins."""
 
-    def __init__(self, base_class, plugin_package, instance_arguments = {}):
+    def __init__(self, base_class, paths, instance_arguments = {}):
         """
         Arguments:
             base_class - the plugin base class (should be a subclass of Plugin)
@@ -75,7 +75,7 @@ class PluginManager(dict):
                 passed to plugins on instantiation.
         """
 
-        self.plugin_package = plugin_package
+        self.paths = paths
         self.base_class = base_class
         self.instance_arguments = instance_arguments
         self.reload_plugins()
@@ -90,7 +90,7 @@ class PluginManager(dict):
         self.clear()
 
         # Instantiate
-        for loader, module_name, is_pkg in pkgutil.iter_modules(self.plugin_package.__path__):
+        for loader, module_name, is_pkg in pkgutil.iter_modules(self.paths):
             for name, plugin_class in loader.find_module(module_name).load_module(module_name).__dict__.iteritems():
                 if isclass(plugin_class) and issubclass(plugin_class, self.base_class) and plugin_class is not self.base_class and name not in self:
                     self[name] = plugin_class(**self.instance_arguments)
